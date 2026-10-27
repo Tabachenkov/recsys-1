@@ -7,9 +7,8 @@ class TimeIALS(IALS):
         self.time = time
         self.T = T
 
-    def fit(self, matrix):
+    def fit(self, matrix, short=None, short_weight=0.5):
         matrix, last_time = matrix
         target = last_time.astype(float).copy()
         target.data = np.exp(-(self.time - target.data) / self.T)
-        return super().fit(matrix, target)
-        
+        return super().fit(matrix, target, short=short, short_weight=short_weight)

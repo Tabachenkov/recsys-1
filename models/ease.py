@@ -14,7 +14,7 @@ class EASE(BaseModel):
         eye = np.eye(self.matrix.shape[1])
         P = solve((self.matrix.T @ self.matrix).toarray() + eye * self.lambda_, 
                   eye, assume_a="pos", check_finite=False)
-        self.B = -P / np.diag(P)[None, :]
+        self.B = np.ascontiguousarray(-P / np.diag(P)[None, :])
         np.fill_diagonal(self.B, 0)
         return self
 

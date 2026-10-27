@@ -15,11 +15,18 @@ class IALS(BaseModel):
         self.tol = tol
         self.seed = seed
 
-    def fit(self, matrix, target=None):
+    def fit(self, matrix, target=None, short=None, short_weight=0.5):
         matrix = matrix.tocsr().astype(float)
         matrix.eliminate_zeros()
         matrix.data[:] = 1
-        target = matrix if target is None else target.tocsr().astype(float)
+        target = matrix.copy() if target is None else target.tocsr().astype(float).multiply(matrix).tocsr()
+        if short is not None:
+            short = short.tocsr().astype(float)
+            short.eliminate_zeros()
+            short.data[:] = 1
+            short = short - short.multiply(matrix)
+            matrix = matrix + short_weight * short
+            matrix.eliminate_zeros()
         
         rng = np.random.default_rng(self.seed)
         self.user_embeddings = rng.normal(0, 0.01, (matrix.shape[0], self.k))
@@ -52,7 +59,7 @@ class IALS(BaseModel):
                                 cur_y.T @ (cur_c * p), assume_a="pos", check_finite=False)
         n_u = self.user_embeddings.size
         n_i = self.item_embeddings.size
-        for _ in (pbar := tqdm(range(self.num_iters))):
+        for _ in (pbar := tqdm(range(self.num_iters), leave=False)):
             user_embeddings_old, item_embeddings_old = self.user_embeddings.copy(), self.item_embeddings.copy()
             step(user_inited[0], user_inited[1], matrix, target, self.user_embeddings, self.item_embeddings, name='user')
             step(item_inited[0], item_inited[1], matrix_T, target_T, self.item_embeddings, self.user_embeddings, name='item')
@@ -68,4 +75,3 @@ class IALS(BaseModel):
 
     def predict_score(self, user):
         return self.item_embeddings @ self.user_embeddings[user]
-        
